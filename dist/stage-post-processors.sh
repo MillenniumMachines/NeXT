@@ -18,16 +18,31 @@ F360_CPS_NAME="nxt-${BUILD_VERSION}-f360.cps"
 FREECAD_PY_NAME="nxt-${BUILD_VERSION}_post.py"
 MCH_NAME="milo-v1.5-std.mch"
 
-SRC_F360="${ROOT}/post-processors/fusion-360/nxt.cps"
-SRC_FREECAD="${ROOT}/post-processors/freecad/nxt_post.py"
-SRC_MCH="${ROOT}/post-processors/fusion-360/milo-v1.5-std.mch"
+# The machine-flow post keeps a fixed filename. FreeCAD's PostProcessorFactory
+# resolves the class as <filename minus _post.py>.title(), so "nxt_machine_post.py"
+# must stay "nxt_machine_post.py" to resolve Nxt_Machine. A versioned name would
+# not be a valid identifier and the factory would silently fall back to
+# WrapperPost. The version is substituted inside the file and carried in each
+# machine definition's nxt_version property instead.
+FREECAD_MACHINE_PY_NAME="nxt_machine_post.py"
 
-for f in "${SRC_F360}" "${SRC_FREECAD}" "${SRC_MCH}"; do
+SRC_F360="${ROOT}/post-processors/fusion-360/nxt.cps"
+SRC_FREECAD="${ROOT}/post-processors/freecad/nxt_legacy_post.py"
+SRC_FREECAD_MACHINE="${ROOT}/post-processors/freecad/nxt_machine_post.py"
+SRC_MCH="${ROOT}/post-processors/fusion-360/milo-v1.5-std.mch"
+SRC_MACHINES="${ROOT}/post-processors/freecad/machines"
+
+for f in "${SRC_F360}" "${SRC_FREECAD}" "${SRC_FREECAD_MACHINE}" "${SRC_MCH}"; do
   if [[ ! -f "${f}" ]]; then
     echo "error: missing post-processor source: ${f}" >&2
     exit 1
   fi
 done
+
+if [[ ! -d "${SRC_MACHINES}" ]]; then
+  echo "error: missing FreeCAD machine definitions: ${SRC_MACHINES}" >&2
+  exit 1
+fi
 
 rm -rf "${OUT_DIR}"
 mkdir -p "${OUT_DIR}"
@@ -40,7 +55,13 @@ substitute_placeholders() {
 
 substitute_placeholders "${SRC_F360}" "${OUT_DIR}/${F360_CPS_NAME}"
 substitute_placeholders "${SRC_FREECAD}" "${OUT_DIR}/${FREECAD_PY_NAME}"
+substitute_placeholders "${SRC_FREECAD_MACHINE}" "${OUT_DIR}/${FREECAD_MACHINE_PY_NAME}"
 substitute_placeholders "${SRC_MCH}" "${OUT_DIR}/${MCH_NAME}"
+
+# Machine definitions are copied verbatim: nxt_version is a real value set per
+# machine, not a build placeholder, so it must not be rewritten here.
+mkdir -p "${OUT_DIR}/machines"
+cp "${SRC_MACHINES}"/*.fcm "${OUT_DIR}/machines/"
 
 if grep -rq '%%NXT_VERSION%%' "${OUT_DIR}" 2>/dev/null; then
   echo "error: unreplaced %%NXT_VERSION%% in staged post-processors under ${OUT_DIR}" >&2
@@ -54,10 +75,16 @@ NXT_BUILD_VERSION=${BUILD_VERSION}
 NXT_PP_DIR=${OUT_DIR}
 NXT_PP_CPS=${OUT_DIR}/${F360_CPS_NAME}
 NXT_PP_PY=${OUT_DIR}/${FREECAD_PY_NAME}
+NXT_PP_MACHINE_PY=${OUT_DIR}/${FREECAD_MACHINE_PY_NAME}
+NXT_PP_MACHINES_DIR=${OUT_DIR}/machines
 NXT_PP_MCH=${OUT_DIR}/${MCH_NAME}
 EOF
 
 echo "Staged post-processors for ${BUILD_VERSION} in ${OUT_DIR}"
 echo "  ${F360_CPS_NAME}"
 echo "  ${FREECAD_PY_NAME}"
+echo "  ${FREECAD_MACHINE_PY_NAME}"
 echo "  ${MCH_NAME}"
+for m in "${OUT_DIR}"/machines/*.fcm; do
+  echo "  machines/$(basename "${m}")"
+done

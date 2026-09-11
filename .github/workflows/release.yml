@@ -74,7 +74,7 @@ jobs:
           # shellcheck source=/dev/null
           source dist/build-version.env
           set +a
-          for key in NXT_BUILD_VERSION NXT_RELEASE_ZIP NXT_PP_CPS NXT_PP_PY NXT_PP_MCH; do
+          for key in NXT_BUILD_VERSION NXT_RELEASE_ZIP NXT_PP_CPS NXT_PP_PY NXT_PP_MACHINE_PY NXT_PP_MACHINES_DIR NXT_PP_MCH; do
             if [[ -z "${!key:-}" ]]; then
               echo "::error::${key} not set in build-version.env" >&2
               exit 1
@@ -85,6 +85,8 @@ jobs:
             echo "NXT_RELEASE_ZIP=${NXT_RELEASE_ZIP}"
             echo "NXT_PP_CPS=${NXT_PP_CPS}"
             echo "NXT_PP_PY=${NXT_PP_PY}"
+            echo "NXT_PP_MACHINE_PY=${NXT_PP_MACHINE_PY}"
+            echo "NXT_PP_MACHINES_DIR=${NXT_PP_MACHINES_DIR}"
             echo "NXT_PP_MCH=${NXT_PP_MCH}"
           } >> "${GITHUB_ENV}"
           echo "Build version: ${NXT_BUILD_VERSION}"
@@ -102,4 +104,6 @@ jobs:
             ${{ env.NXT_RELEASE_ZIP }}
             ${{ env.NXT_PP_CPS }}
             ${{ env.NXT_PP_PY }}
+            ${{ env.NXT_PP_MACHINE_PY }}
+            ${{ env.NXT_PP_MACHINES_DIR }}/*.fcm
             ${{ env.NXT_PP_MCH }}
